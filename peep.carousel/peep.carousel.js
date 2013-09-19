@@ -33,12 +33,15 @@ if (typeof Object.create !== 'function') {
       base.imageSize = base.carouselLi.find('img').size();
       base.count = base.minCount = 1;
       base.maxCount = parseInt(base.imageSize / base.options.displayImageNum);
+      base.startPosX = base.endPosX = 0;
+      base.translateVal = 10;
 
       base.$elem.css('width', 'auto');
       base.carouselUl.height(base.carouselLi.height());
 
       base.buildCarousel();
       base.buildNavigation();
+      base.setEventType();
 
       $(window).resize(function() {
         base.buildCarousel();
@@ -52,7 +55,7 @@ if (typeof Object.create !== 'function') {
       var paddingPx = windowWidth * paddingPxPercent;
       var carouselDisplayWidth = windowWidth - paddingPx * 2;           
       var carouselLiWidth = carouselDisplayWidth / base.options.displayImageNum;     
-      var carouselUlWidth = carouselLiWidth * base.imageSize + paddingPx * 2;
+      var carouselUlWidth = carouselLiWidth * (base.imageSize + base.options.displayImageNum - 1) + paddingPx * 2;
 
       base.translateXWidth = carouselLiWidth * base.options.displayImageNum;          
       base.carouselUl.width(carouselUlWidth);
@@ -87,13 +90,66 @@ if (typeof Object.create !== 'function') {
       });
     },
 
+    setEventType: function() {
+      var base = this;
+
+      var events = {
+        start: {
+          touch: 'touchstart',
+          mouse: 'mousedown'
+        },
+        move: {
+          touch: 'touchmove',
+          mouse: 'mousemove'
+        },
+        end: {
+          touch: 'touchend',
+          mouse: 'mouseup'
+        }
+      };
+
+      var agent = navigator.userAgent;
+      if (agent.search(/iPhone/) != -1 || agent.search(/iPad/) != -1 || agent.search(/Android/) != -1) {
+        base.eventTypes = 'touch';
+      } else {
+        base.eventTypes = 'mouse';
+      }
+      base.eventStart = events.start[base.eventTypes];
+      base.eventMove = events.move[base.eventTypes];
+      base.eventEnd = events.end[base.eventTypes];
+
+      base.eventListener();
+    },
+
+    eventListener: function() {
+      var base = this;
+
+      $(document).on(base.eventStart, base.carouselUl, function(e) {
+        base.startPosX = e.pageX;
+      });
+
+      $(document).on(base.eventEnd, base.carouselUl, function(e) {
+        base.endPosX = e.pageX;
+        var translateX = base.startPosX - base.endPosX;
+
+        if (translateX < -base.translateVal) {
+          base.prev();
+        } else if (base.translateVal < translateX) {
+          base.next();
+        }
+
+        base.startPosX = base.endPosX = 0;
+      });
+    },
+
     prev: function() {
       var base = this;
 
       if (base.count > base.minCount) {
         base.count--;
         var count = base.count - 1;
-        base.translateNaviView(count);
+        var translateWidth = - base.translateXWidth * count;
+        base.translateNaviView(translateWidth);
         base.initNaviView(count);
       }
 
@@ -104,8 +160,10 @@ if (typeof Object.create !== 'function') {
       var base = this;
 
       if (base.count <= base.maxCount) {
+        var translateWidth = - base.translateXWidth * base.count;
+
         base.initNaviView();
-        base.translateNaviView();
+        base.translateNaviView(translateWidth);
         base.count++;
       }
 
@@ -120,14 +178,13 @@ if (typeof Object.create !== 'function') {
       base.naviViewLi.eq(count).addClass('active');
     },
 
-    translateNaviView: function(count) {
+    translateNaviView: function(translateWidth) {
       var base = this;
-      if (typeof count === "undefined") count = base.count;
-
-      var translateWidth = - base.translateXWidth * count;
       base.carouselUl.css({
-        '-webkit-transform' : 'translate3d(' + translateWidth + 'px,0,0)',
-        '-webkit-transition': '-webkit-transform 400ms cubic-bezier(0,0,0.25,1)'
+        '-webkit-transform' : 'translate3d(' + translateWidth + 'px, 0, 0)',
+        '-moz-transform'    : 'translate3d(' + translateWidth + 'px, 0, 0)',
+        '-webkit-transition': '-webkit-transform 400ms cubic-bezier(0, 0, 0.25, 1)',
+        '-moz-transition'   : '-moz-transform 400ms cubic-bezier(0, 0, 0.25, 1)'
       });
     }
   };
