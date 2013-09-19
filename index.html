@@ -2,20 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,minimum-scale=1.0,maximum-scale=1.0,user-scalable=0">
+<meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
 <link rel="stylesheet" type="text/css" href="peep.carousel/peep.carousel.css" >
 <script type="text/javascript" src="http://zeptojs.com/zepto.min.js"></script>
-<script type="text/javascript" src="peep.carousel/peep.carousel.js"></script>
-<script type="text/javascript">
-$(function() {
-    var options = {
-      'displayImageNum': 4
-    };
-
-    $('#peep1').peepCarousel();
-    $('#peep2').peepCarousel(options);
-});
-</script>
 </head>
 
 <body>
@@ -109,5 +98,17 @@ $(function() {
     </ul>
 </div>
 
+<script type="text/javascript" src="peep.carousel/peep.carousel.js"></script>
+<script type="text/javascript">
+$(function() {
+    var options = {
+      'displayImageNum': 4,
+      'navigationText' : ['prev', 'next']
+    };
+
+    $('#peep1').peepCarousel();
+    $('#peep2').peepCarousel(options);
+});
+</script>
 </body>
 </html>
