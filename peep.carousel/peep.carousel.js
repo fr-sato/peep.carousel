@@ -132,21 +132,35 @@ if (typeof Object.create !== 'function') {
       $(document).on(base.eventTap, '#' + base.carouselId + ' div.peep-next', function() {
         base.next();
       });
+
+      base[base.eventTypes + 'Carousel']();
+    },
+
+    touchCarousel: function() {
+      var base = this;
+
       $(document).on('swipeLeft', '#' + base.carouselId + ' ul', function(e) {
         base.next();
       });
+
       $(document).on('swipeRight', '#' + base.carouselId + ' ul', function(e) {
         base.prev();
       });
+    },
 
-      $(document).on('mousedown', '#' + base.carouselId + ' ul', function(e) {
+    mouseCarousel: function() {
+      var base = this;
+
+      $(document).on(base.eventStart, '#' + base.carouselId + ' ul', function(e) {
         base.startPosX = e.pageX;
       });
 
-      $(document).on('mouseup', '#' + base.carouselId + ' ul', function(e) {
+      $(document).on(base.eventMove, '#' + base.carouselId + ' ul', function(e) {
         base.endPosX = e.pageX;
-        var translateX = base.startPosX - base.endPosX;
+      });
 
+      $(document).on(base.eventEnd, '#' + base.carouselId + ' ul', function(e) {
+        var translateX = base.startPosX - base.endPosX;
         if (translateX < -base.translateVal) {
           base.prev();
         } else if (base.translateVal < translateX) {
