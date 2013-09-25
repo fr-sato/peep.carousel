@@ -15,15 +15,15 @@ if (typeof Object.create !== 'function') {
   var Carousel = {
     init: function(options, el) {
       var base = this;
-      base.options = $.extend({}, $.fn.peepCarousel.options, options);
-      var elem = el;
       var $elem = $(el);
+
+      base.options = $.extend({}, $.fn.peepCarousel.options, options);
       base.$elem = $elem;
 
-      base.startUp();
+      base.set();
     },
 
-    startUp: function() {
+    set: function() {
       var base = this;
       base.carouselId = base.$elem.attr('id');
       base.carouselUl = base.$elem.find('ul');
@@ -32,68 +32,26 @@ if (typeof Object.create !== 'function') {
       base.carouselLiLast = base.carouselLi.last();
       base.imageSize = base.carouselLi.find('img').size();
       base.count = base.minCount = 1;
-      base.maxCount = parseInt(base.imageSize / base.options.displayImageNum);
+      base.maxCount = Math.ceil(parseFloat(base.imageSize / base.options.displayImageNum));
       base.startPosX = base.endPosX = 0;
       base.translateVal = 10;
 
-      base.$elem.css('width', 'auto');
-      base.carouselUl.height(base.carouselLi.height());
-
-      base.buildCarousel();
-      base.buildNavigation();
       base.setEventType();
 
-      $(window).resize(function() {
-        base.buildCarousel();
-      });
-    },
+      base.buildCarousel();
+      if (base.options.displayPagination) base.buildPagination();
 
-    buildCarousel: function() {
-      var base = this;
-      var windowWidth = $(window).width();
-      var paddingPxPercent = base.options.paddingPercent * windowWidth;
-      var paddingPx = windowWidth * paddingPxPercent;
-      var carouselDisplayWidth = windowWidth - paddingPx * 2;           
-      var carouselLiWidth = carouselDisplayWidth / base.options.displayImageNum;     
-      var carouselUlWidth = carouselLiWidth * (base.imageSize + base.options.displayImageNum - 1) + paddingPx * 2;
-
-      base.translateXWidth = carouselLiWidth * base.options.displayImageNum;          
-      base.carouselUl.width(carouselUlWidth);
-      base.carouselLi.width(carouselLiWidth);
-      base.carouselLiFirst.css('padding-left', paddingPx);
-      base.carouselLiLast.css('padding-right', paddingPx);
-
-      base.translateNaviView(base.count - 1);
-    },
-
-    buildNavigation: function() {
-      var base = this;
-      var naviTemplate = '<ul class="carouselNavi"><li class="prev">' + base.options.navigationText[0]+ '</li><li class="next">' + base.options.navigationText[1]+ '</li></ul><ul class="carouselNaviView">';
-
-      for (var i = 0; i <= base.maxCount; i++) {
-        if (i == 0) {
-          naviTemplate = naviTemplate + '<li class="active"></li>';
-        } else {
-          naviTemplate = naviTemplate + '<li></li>';
-        }
-      }
-      naviTemplate = naviTemplate + '</ul'>
-      base.$elem.append(naviTemplate);
-      base.naviViewLi = base.$elem.children('ul.carouselNaviView').find('li');
-
-      $(document).on('tap click', '#' + base.carouselId + ' li.prev', function() {
-        base.prev();
-      });
-
-      $(document).on('tap click', '#' + base.carouselId + ' li.next', function() {
-        base.next();
-      });
+      base.eventListener();
     },
 
     setEventType: function() {
       var base = this;
 
       var events = {
+        tap: {
+          touch: 'tap',
+          mouse: 'click'
+        },
         start: {
           touch: 'touchstart',
           mouse: 'mousedown'
@@ -114,24 +72,95 @@ if (typeof Object.create !== 'function') {
       } else {
         base.eventTypes = 'mouse';
       }
+
+      base.eventTap = events.tap[base.eventTypes];
       base.eventStart = events.start[base.eventTypes];
       base.eventMove = events.move[base.eventTypes];
       base.eventEnd = events.end[base.eventTypes];
+    },
 
-      base.eventListener();
+    buildCarousel: function() {
+      var base = this;
+      var windowWidth = $(window).width();
+      var paddingPx = (base.options.displaySide) ? windowWidth * windowWidth * base.options.sidePercent * 0.00015 : 0;
+      var carouselDisplayWidth = windowWidth - paddingPx * 2;
+      var carouselLiWidth = carouselDisplayWidth / base.options.displayImageNum;
+      var carouselUlWidth = carouselLiWidth * (base.imageSize + base.options.displayImageNum - 1) + paddingPx * 2;
+
+      base.translateXWidth = carouselLiWidth * base.options.displayImageNum;
+      base.$elem.css('width', 'auto');
+      base.carouselUl.width(carouselUlWidth);
+      base.carouselUl.height(base.carouselLi.height());
+      base.carouselLi.width(carouselLiWidth);
+      base.carouselLiFirst.css('padding-left', paddingPx);
+      base.carouselLiLast.css('padding-right', paddingPx);
+
+      var translateWidth = - base.translateXWidth * (base.count - 1);
+      base.translatePagination(translateWidth);
+    },
+
+    buildPagination: function() {
+      var base = this;
+      var prevTemplate = '<div class="peep-button peep-prev"><span></span></div>';
+      var nextTemplate = '<div class="peep-button peep-next"><span></span></div>';
+
+      var pageTemplate = '';
+      for (var i = 1; i <= base.maxCount; i++) {
+        if (i == 1) {
+          pageTemplate = pageTemplate + '<div class="peep-page"><span class="active"></span></div>';
+        } else {
+          pageTemplate = pageTemplate + '<div class="peep-page"><span></span></div>';
+        }
+      }
+
+      var paginationTemplate = '<div class="peep-pagination">' + prevTemplate + pageTemplate + nextTemplate + '</div>';
+      base.$elem.append(paginationTemplate);
+      base.paginationDiv = base.$elem.find('div.peep-pagination').children('div.peep-page');
     },
 
     eventListener: function() {
       var base = this;
 
-      $(document).on(base.eventStart, base.carouselUl, function(e) {
+      $(window).resize(function() {
+        base.buildCarousel();
+      });
+
+      $(document).on(base.eventTap, '#' + base.carouselId + ' div.peep-prev', function() {
+        base.prev();
+      });
+
+      $(document).on(base.eventTap, '#' + base.carouselId + ' div.peep-next', function() {
+        base.next();
+      });
+
+      base[base.eventTypes + 'Carousel']();
+    },
+
+    touchCarousel: function() {
+      var base = this;
+
+      $(document).on('swipeLeft', '#' + base.carouselId + ' ul', function(e) {
+        base.next();
+      });
+
+      $(document).on('swipeRight', '#' + base.carouselId + ' ul', function(e) {
+        base.prev();
+      });
+    },
+
+    mouseCarousel: function() {
+      var base = this;
+
+      $(document).on(base.eventStart, '#' + base.carouselId + ' ul', function(e) {
         base.startPosX = e.pageX;
       });
 
-      $(document).on(base.eventEnd, base.carouselUl, function(e) {
+      $(document).on(base.eventMove, '#' + base.carouselId + ' ul', function(e) {
         base.endPosX = e.pageX;
-        var translateX = base.startPosX - base.endPosX;
+      });
 
+      $(document).on(base.eventEnd, '#' + base.carouselId + ' ul', function(e) {
+        var translateX = base.startPosX - base.endPosX;
         if (translateX < -base.translateVal) {
           base.prev();
         } else if (base.translateVal < translateX) {
@@ -149,8 +178,8 @@ if (typeof Object.create !== 'function') {
         base.count--;
         var count = base.count - 1;
         var translateWidth = - base.translateXWidth * count;
-        base.translateNaviView(translateWidth);
-        base.initNaviView(count);
+        base.translatePagination(translateWidth);
+        base.initPagination(count);
       }
 
       return false;
@@ -159,26 +188,27 @@ if (typeof Object.create !== 'function') {
     next: function() {
       var base = this;
 
-      if (base.count <= base.maxCount) {
+      if (base.count < base.maxCount) {
         var translateWidth = - base.translateXWidth * base.count;
 
-        base.initNaviView();
-        base.translateNaviView(translateWidth);
+        base.initPagination();
+        base.translatePagination(translateWidth);
         base.count++;
       }
 
       return false;
     },
 
-    initNaviView: function(count) {
+    initPagination: function(count) {
       var base = this;
+      if (!base.options.displayPagination) return;
       if (typeof count === "undefined") count = base.count;
 
-      base.naviViewLi.removeClass('active');
-      base.naviViewLi.eq(count).addClass('active');
+      base.paginationDiv.children().removeClass('active');
+      base.paginationDiv.eq(count).find('span').addClass('active');
     },
 
-    translateNaviView: function(translateWidth) {
+    translatePagination: function(translateWidth) {
       var base = this;
       base.carouselUl.css({
         '-webkit-transform' : 'translate3d(' + translateWidth + 'px, 0, 0)',
@@ -197,8 +227,9 @@ if (typeof Object.create !== 'function') {
   };
 
   $.fn.peepCarousel.options = {
-    displayImageNum : 3,
-    paddingPercent  : 0.00015,
-    navigationText  : ['前へ', '次へ']
+    displayImageNum   : 3,
+    displayPagination : true,
+    displaySide       : true,
+    sidePercent       : 1
   };
 })(Zepto, window, document);
